@@ -31,6 +31,10 @@
 #include <asf.h>
 #include "timer_interface.h"
 #include "wifi.h"
+#include "camera.h"
+#include "conf_board.h"
+#include "conf_clock.h"
+
 
 int main (void)
 {
@@ -47,8 +51,8 @@ int main (void)
 	//wifi_init(); Reset the WiFi and wait for it to connect, disable command prompt (>) and echo 
 	configure_wifi_comm_pin();
 	configure_wifi_web_setup_pin();
-	//camera_init();
-	//configure_camera();
+	init_camera(); //Enable PIO and OV7740 drivers
+	configure_camera();
 	
 	//Wait for connection while listening to wifi web set up flag
 	while(!reset_wifi()){

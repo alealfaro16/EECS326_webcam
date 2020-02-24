@@ -1,7 +1,7 @@
 /*
  * camera.h
  *
- * Created: 2/6/2020 2:00:03 PM
+ * Created: 2/23/2020 7:47:09 PM
  *  Author: ece-lab3
  */ 
 
@@ -14,18 +14,23 @@
 #define BOARD_TWI                      TWI0
 #define BOARD_TWI_IRQn                 TWI0_IRQn
 
+/* SRAM board defines. */
+#define SRAM_BASE                      (0x60000000UL) // SRAM adress
+#define SRAM_CS                        (0UL)
+#define CAP_DEST                       SRAM_BASE
+
 /* Image sensor board defines. */
-// Image sensor Power pin.
-#define OV_POWER_PIO                   OV_SW_OVT_PIO
-#define OV_POWER_MASK                  OV_SW_OVT_MASK
+#define IMAGE_WIDTH                    (320UL) //What should this be?
+#define IMAGE_HEIGHT                   (240UL)
 // Image sensor VSYNC pin.
-#define OV7740_VSYNC_PIO	       OV_VSYNC_PIO
-#define OV7740_VSYNC_ID		       OV_VSYNC_ID
-#define OV7740_VSYNC_MASK              OV_VSYNC_MASK
-#define OV7740_VSYNC_TYPE              OV_VSYNC_TYPE
+#define OV7740_VSYNC_PIO	           PIOA
+#define OV7740_VSYNC_ID		           ID_PIOA
+#define OV7740_VSYNC_MASK              PIO_PA15 //Need to change pin to actual pin
+#define OV7740_VSYNC_TYPE              PIO_PULLUP
 // Image sensor data pin.
-#define OV7740_DATA_BUS_PIO            OV_DATA_BUS_PIO
-#define OV7740_DATA_BUS_ID             OV_DATA_BUS_ID
+#define OV7740_DATA_BUS_PIO            PIOA
+#define OV7740_DATA_BUS_ID             ID_PIOA
+
 
 void vsync_handler(uint32_t ul_id, uint32_t ul_mask);
 void init_vsync_interrupts(void);
@@ -35,8 +40,7 @@ uint8_t pio_capture_to_buffer(Pio *p_pio, uint8_t *uc_buf, uint32_t ul_size);
 void init_camera(void);
 void configure_camera(void);
 uint8_t start_capture(void);
-uint8_t find_image_len(void);	
-
+uint8_t find_image_len(void);
 
 
 #endif /* CAMERA_H_ */

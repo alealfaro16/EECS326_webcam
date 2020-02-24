@@ -29,21 +29,26 @@
  * Support and FAQ: visit <a href="https://www.microchip.com/support/">Microchip Support</a>
  */
 #include <asf.h>
+#include "timer_interface.h"
+#include "wifi.h"
 
 int main (void)
 {
 	/* Insert system clock initialization code here (sysclk_init()). */
 
 	board_init();
-	sysclk_init();
-	/* Configure Timer and start it. Configure WiFi, USART, Command pin and Web Setup pin
-	timer_interface_init();
-	configure_usart_wifi(); 
-	wifi_init(); Reset the WiFi and wait for it to connect, disable command prompt (>) and echo 
+	sysclk_init();  //Enable System Clock Service in ASF Wizard and choose clock in config/conf_clock.h
+	ioport_init();  //Enable IOPORT and GPIO service in the ASFW
+	
+	//Configure Timer and start it. Configure WiFi, USART, Command pin and Web Setup pin
+	configure_tc();  //Use timer_interface.c function and enable Timer Clock drivers in the ASFW
+	
+	configure_usart_wifi(); //Enable USART drivers and services + PDC for buffer (Unsure about it)
+	//wifi_init(); Reset the WiFi and wait for it to connect, disable command prompt (>) and echo 
 	configure_wifi_comm_pin();
 	configure_wifi_web_setup_pin();
-	camera_init();
-	configure_camera();
+	//camera_init();
+	//configure_camera();
 	
 	//Wait for connection while listening to wifi web set up flag
 	while(!reset_wifi()){
@@ -54,7 +59,7 @@ int main (void)
 		}
 	}
 	
-		*/
+	
 	/* Infinite while loop */
 	while(1){
 		

@@ -5,6 +5,7 @@
  *  Author: ece-lab3
  */ 
 
+#include "camera.h"
 
 /* Uncomment this macro to work in black and white mode */
 #define DEFAULT_MODE_COLORED
@@ -17,10 +18,10 @@
 #define TWI_CLK     (400000UL)
 
 /* Pointer to the image data destination buffer */
-uint8_t *g_p_uc_cap_dest_buf;
+uint8_t *pointer_dest_buf;
 
 /* Rows size of capturing picture */
-uint16_t g_us_cap_rows = IMAGE_HEIGHT;
+uint16_t pic_rows = IMAGE_HEIGHT;
 
 /* Define display function and line size of captured picture according to the */
 /* current mode (color or black and white) */
@@ -36,8 +37,9 @@ uint16_t g_us_cap_line = (IMAGE_WIDTH * 2);
 uint16_t g_us_cap_line = (IMAGE_WIDTH);
 #endif
 
-/* Push button information (true if it's triggered and false otherwise) */
-static volatile uint32_t g_ul_push_button_trigger = false;
+//Image length
+static uint32_t img_length = 0;
+
 
 /* Vsync signal information (true if it's triggered and false otherwise) */
 static volatile uint32_t g_ul_vsync_flag = false;
@@ -134,13 +136,13 @@ static uint8_t pio_capture_to_buffer(Pio *p_pio, uint8_t *uc_buf,
 /**
  * \brief Start picture capture.
  */
-static void start_capture(void)
+uint8_t start_capture(void)
 {
 	/* Set capturing destination address*/
-	g_p_uc_cap_dest_buf = (uint8_t *)CAP_DEST;
+	pointer_dest_buf = (uint8_t *)CAP_DEST;
 
 	/* Set cap_rows value*/
-	g_us_cap_rows = IMAGE_HEIGHT;
+	pic_rows = IMAGE_HEIGHT;
 
 	/* Enable vsync interrupt*/
 	pio_enable_interrupt(OV7740_VSYNC_PIO, OV7740_VSYNC_MASK);
@@ -159,19 +161,27 @@ static void start_capture(void)
 
 	/* Capture data and send it to external SRAM memory thanks to PDC
 	 * feature */
-	pio_capture_to_buffer(OV7740_DATA_BUS_PIO, g_p_uc_cap_dest_buf,
-			(g_us_cap_line * g_us_cap_rows) >> 2);
+	pio_capture_to_buffer(OV7740_DATA_BUS_PIO, pointer_dest_buf,
+			(g_us_cap_line * pic_rows) >> 2);
 
 	/* Wait end of capture*/
 	while (!((OV7740_DATA_BUS_PIO->PIO_PCISR & PIO_PCIMR_RXBUFF) ==
 			PIO_PCIMR_RXBUFF)) {
 	}
-
+	
+	//Find image length
+	if(!find_image_len()){
+	
+		return 0;
+	}
+	
 	/* Disable pio capture*/
 	pio_capture_disable(OV7740_DATA_BUS_PIO);
 
 	/* Reset vsync flag*/
 	g_ul_vsync_flag = false;
+	
+	return 1;
 }
 
 
@@ -180,16 +190,12 @@ static void start_capture(void)
  */
 static void init_camera(void)
 {
-	twi_options_t opt;
 
 	/* Init Vsync handler*/
 	init_vsync_interrupts();
 
 	/* Init PIO capture*/
-	pio_capture_init(OV_DATA_BUS_PIO, OV_DATA_BUS_ID);
-
-	/* Turn on ov7740 image sensor using power pin */
-	ov_power(true, OV_POWER_PIO, OV_POWER_MASK);
+	pio_capture_init(OV7740_DATA_BUS_PIO, OV7740_DATA_BUS_ID);
 
 	/* Init PCK0 to work at 24 Mhz */
 	/* 96/4=24 Mhz */
@@ -198,6 +204,16 @@ static void init_camera(void)
 	while (!(PMC->PMC_SCSR & PMC_SCSR_PCK0)) {
 	}
 
+	configure_twi();
+
+	/* Wait 3 seconds to let the image sensor to adapt to environment */
+	delay_ms(3000);
+}
+
+void configure_twi(void){
+	
+	twi_options_t opt;
+	
 	/* Enable TWI peripheral */
 	pmc_enable_periph_clk(ID_BOARD_TWI);
 
@@ -211,14 +227,49 @@ static void init_camera(void)
 	NVIC_ClearPendingIRQ(BOARD_TWI_IRQn);
 	NVIC_SetPriority(BOARD_TWI_IRQn, 0);
 	NVIC_EnableIRQ(BOARD_TWI_IRQn);
+}
 
+void configure_camera(void){
+	
 	/* ov7740 Initialization */
 	while (ov_init(BOARD_TWI) == 1) {
 	}
 
 	/* ov7740 configuration */
 	ov_configure(BOARD_TWI, QVGA_YUV422_20FPS);
+}
 
-	/* Wait 3 seconds to let the image sensor to adapt to environment */
-	delay_ms(3000);
+
+uint8_t find_image_len(void){  //Finds image length based on JPEG protocol. Returns 1 on success (i.e. able to find “end of image” and “start of image” markers), 0 on error.
+	
+	//checks that image in buffer starts with FF D8 FF
+	int *first_ptr =  pointer_dest_buf;
+	int *second_ptr = first_ptr++;
+	int *third_ptr = second_ptr++;
+	
+	img_length = 0;
+	uint32_t found_end = false;
+	
+	if(*first_ptr == "FF" && *second_ptr == "D8" && *third_ptr  == "FF"){
+		
+		img_length = 3;
+		int *ptr = third_ptr++;
+		
+		while(!found_end){
+			//Loop until finding the end markers FF D9 of a jpeg image
+			if(*ptr == "FF" && *ptr++ == "D9"){	
+				found_end = true;
+			}
+			
+			img_length++;
+		}
+		
+		return 1;
+		
+	}
+	else{
+		
+		//Image not in buffer or not using jpeg protocol
+		return 0;
+	}
 }

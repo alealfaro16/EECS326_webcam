@@ -30,7 +30,7 @@
  */
 #include <asf.h>
 #include "timer_interface.h"
-#include "wifi.h"
+//#include "wifi.h"
 #include "camera.h"
 #include "conf_board.h"
 #include "conf_clock.h"
@@ -43,7 +43,7 @@
 int main (void)
 {
 	/* Insert system clock initialization code here (sysclk_init()). */
-
+	//osc_enable(OSC_MAINCK_XTAL);
 	sysclk_init();  //Enable System Clock Service in ASF Wizard and choose clock in config/conf_clock.h (Use PLLA for SYSCLK and 120MHz)
 	board_init();
 	ioport_init();  //Enable IOPORT and GPIO service in the ASFW
@@ -58,7 +58,7 @@ int main (void)
 	//configure_wifi_comm_pin();
 	//configure_wifi_web_setup_pin();
 	init_camera(); //Enable PIO 
-	//configure_camera();
+	configure_camera();
 	
 	//Wait for connection while listening to wifi web set up flag
 	//while(!reset_wifi()){
@@ -74,13 +74,14 @@ int main (void)
 	/* Infinite while loop */
 	while(1){
 		
+		
 		ioport_toggle_pin_level(LED);
 		
 		delay_ms(300);
 		
 		//ioport_set_pin_level(LED,false);
 		
-		//start_capture();
+		start_capture();
 		
 		/*
 		//check for web setup flag

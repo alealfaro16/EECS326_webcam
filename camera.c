@@ -27,17 +27,17 @@ uint16_t pic_rows = IMAGE_HEIGHT;
 
 /* Define display function and line size of captured picture according to the */
 /* current mode (color or black and white) */
-#ifdef DEFAULT_MODE_COLORED
-#define _display() draw_frame_yuv_color_int()
+//#ifdef DEFAULT_MODE_COLORED
+//#define _display() draw_frame_yuv_color_int()
 
 /* (IMAGE_WIDTH *2 ) because ov7740 use YUV422 format in color mode */
 /* (draw_frame_yuv_color_int for more details) */
-uint16_t g_us_cap_line = (IMAGE_WIDTH * 2);
-#else
-#define _display() draw_frame_yuv_bw8()
+//uint16_t g_us_cap_line = (IMAGE_WIDTH * 2);
+//#else
+//#define _display() draw_frame_yuv_bw8()
 
-uint16_t g_us_cap_line = (IMAGE_WIDTH);
-#endif
+//uint16_t g_us_cap_line = (IMAGE_WIDTH);
+//#endif
 
 //Image length
 static uint32_t img_length = 0;
@@ -51,7 +51,7 @@ static volatile uint32_t g_ul_vsync_flag = false;
  * \brief Handler for vertical synchronisation using by the OV7740 image
  * sensor.
  */
- void vsync_handler(uint32_t ul_id, uint32_t ul_mask)
+static void vsync_handler(uint32_t ul_id, uint32_t ul_mask)
 {
 	unused(ul_id);
 	unused(ul_mask);
@@ -67,11 +67,11 @@ static volatile uint32_t g_ul_vsync_flag = false;
 {
 	/* Initialize PIO interrupt handler, see PIO definition in conf_board.h
 	**/
-	pio_handler_set(OV7740_VSYNC_PIO, OV7740_VSYNC_ID, OV7740_VSYNC_MASK,
-			OV7740_VSYNC_TYPE, vsync_handler);
+	pio_handler_set(OV_VSYNC_PIO, OV_VSYNC_ID, OV_VSYNC_MASK,
+			OV_VSYNC_TYPE, vsync_handler);
 
 	/* Enable PIO controller IRQs */
-	NVIC_EnableIRQ((IRQn_Type)OV7740_VSYNC_ID);
+	NVIC_EnableIRQ(PIOA_IRQn);//(IRQn_Type)OV_VSYNC_ID);
 }
 
 
@@ -138,7 +138,7 @@ static volatile uint32_t g_ul_vsync_flag = false;
 /**
  * \brief Start picture capture.
  */
-uint8_t start_capture(void)
+void start_capture(void)
 {
 	/* Set capturing destination address*/
 	pointer_dest_buf = (uint8_t *)CAP_DEST;
@@ -147,7 +147,7 @@ uint8_t start_capture(void)
 	pic_rows = IMAGE_HEIGHT;
 
 	/* Enable vsync interrupt*/
-	pio_enable_interrupt(OV7740_VSYNC_PIO, OV7740_VSYNC_MASK);
+	pio_enable_interrupt(OV_VSYNC_PIO, OV_VSYNC_MASK);
 
 	/* Capture acquisition will start on rising edge of Vsync signal.
 	 * So wait g_vsync_flag = 1 before start process
@@ -156,34 +156,35 @@ uint8_t start_capture(void)
 	}
 
 	/* Disable vsync interrupt*/
-	pio_disable_interrupt(OV7740_VSYNC_PIO, OV7740_VSYNC_MASK);
+	pio_disable_interrupt(OV_VSYNC_PIO, OV_VSYNC_MASK);
 
 	/* Enable pio capture*/
-	pio_capture_enable(OV7740_DATA_BUS_PIO);
+	pio_capture_enable(OV_DATA_BUS_PIO);
 
-	/* Capture data and send it to external SRAM memory thanks to PDC
+	/* Capture data and send it to external iRAM memory thanks to PDC
 	 * feature */
-	pio_capture_to_buffer(OV7740_DATA_BUS_PIO, pointer_dest_buf,
-			(g_us_cap_line * pic_rows) >> 2);
+	pio_capture_to_buffer(OV_DATA_BUS_PIO, pointer_dest_buf, (IMAGE_WIDTH * pic_rows) >> 2);
 
 	/* Wait end of capture*/
-	while (!((OV7740_DATA_BUS_PIO->PIO_PCISR & PIO_PCIMR_RXBUFF) ==
-			PIO_PCIMR_RXBUFF)) {
+	while (!((OV_DATA_BUS_PIO->PIO_PCISR & PIO_PCIMR_RXBUFF) == PIO_PCIMR_RXBUFF))  //Data not being sent
+	{
+		
 	}
 	
 	//Find image length
-	if(!find_image_len()){
+	//if(!find_image_len()){
 	
-		return 0;
-	}
+	//	return 0;
+	//}
 	
 	/* Disable pio capture*/
-	pio_capture_disable(OV7740_DATA_BUS_PIO);
+	pio_capture_disable(OV_DATA_BUS_PIO);
 
 	/* Reset vsync flag*/
 	g_ul_vsync_flag = false;
 	
-	return 1;
+	return;
+	//return 1;
 }
 
 
@@ -203,11 +204,11 @@ uint8_t start_capture(void)
 	init_vsync_interrupts();
 
 	/* Init PIO capture*/
-	pio_capture_init(OV7740_DATA_BUS_PIO, OV7740_DATA_BUS_ID);
+	pio_capture_init(OV_DATA_BUS_PIO, OV_DATA_BUS_ID);
 
 	/* Init PCK1 to work at 24 Mhz */
 	/* 96/4=24 Mhz */
-	PMC->PMC_PCK[1] = (PMC_PCK_PRES_CLK_4 | PMC_PCK_CSS_PLLB_CLK); //Unsure about this
+	PMC->PMC_PCK[1] = (PMC_PCK_PRES_CLK_4 | PMC_PCK_CSS_PLLB_CLK); 
 	PMC->PMC_SCER = PMC_SCER_PCK1;
 	while (!(PMC->PMC_SCSR & PMC_SCSR_PCK1)) {
 	}
@@ -242,7 +243,10 @@ void configure_camera(void){
 	}
 
 	/* ov7740 configuration */
-	ov_configure(BOARD_TWI, QVGA_YUV422_20FPS);
+	ov_configure(BOARD_TWI, JPEG_INIT);
+	ov_configure(BOARD_TWI, YUV422);
+	ov_configure(BOARD_TWI, JPEG);
+	ov_configure(BOARD_TWI, JPEG_640x480);
 	
 	/* Wait 3 seconds to let the image sensor to adapt to environment */
 	delay_ms(3000);

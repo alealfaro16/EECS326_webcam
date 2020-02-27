@@ -11,30 +11,8 @@
 #include "conf_board.h"
 #include "conf_clock.h"
 #include "wifi.h"
+#include "timer_interface.h"
 
-
-//USART with PDC Enable definintions:
-
-/** Number of bytes received between two timer ticks. */
-//volatile uint32_t g_ul_bytes_received = 0;
-
-/** Receive buffer. */
-//uint8_t g_uc_buffer;
-
-/** PDC data packet. */
-//pdc_packet_t g_st_packet, g_st_nextpacket;
-
-/** Pointer to PDC register base. */
-//Pdc *g_p_pdc;
-
-/** String g_uc_buffer (might not need this) */
-//uint8_t g_puc_string[BUFFER_SIZE];
-
-/** Receive buffer. */
-//static uint8_t gs_puc_buffer[BUFFER_SIZE],gs_puc_nextbuffer[BUFFER_SIZE];
-
-/** Dump buffer. */
-//static uint8_t gs_dump_buffer[BUFFER_SIZE];
 
 /** USART FIFO transfer type definition. */
 
@@ -42,13 +20,10 @@
 static uint8_t byte_buffer = 0;
 
 static unsigned char UART_RxBuf[UART_RX_BUFFER_SIZE];
-static volatile unsigned char UART_RxHead;
-static volatile unsigned char UART_RxTail;
+static RxBuff_count = 0;
 
 /* Push button information (true if it's triggered and false otherwise) */
 static volatile uint32_t web_setup = false;
-
-
 
 
 /**
@@ -79,7 +54,7 @@ static volatile uint32_t web_setup = false;
 /**
  *  Configure board USART communication with PC or other terminal.
  */
-static void configure_usart_wifi(void)
+void configure_usart_wifi(void)
 {
 	static uint32_t ul_sysclk;
 	const sam_usart_opt_t usart_console_settings = {
@@ -111,15 +86,7 @@ static void configure_usart_wifi(void)
 	/* Configure and enable interrupt of USART. */
 	NVIC_EnableIRQ(USART_IRQn);
 	
-	
-	/* Get board USART PDC base address and enable receiver. */
-	//g_p_pdc = usart_get_pdc_base(BOARD_USART);
-	//g_st_packet.ul_addr = (uint32_t)gs_puc_buffer;
-	//g_st_packet.ul_size = BUFFER_SIZE;
-	//g_st_nextpacket.ul_addr = (uint32_t)gs_puc_nextbuffer;
-	//g_st_nextpacket.ul_size = BUFFER_SIZE;
-	//pdc_rx_init(g_p_pdc, &g_st_packet, &g_st_nextpacket);
-	//pdc_enable_transfer(g_p_pdc, PERIPH_PTCR_RXTEN);
+
 	
 	usart_enable_interrupt(BOARD_USART, US_IER_RXRDY); //Not sure which interrupt to use, currently interrupt happen when RX is ready
 }
@@ -128,10 +95,10 @@ static void configure_usart_wifi(void)
 void configure_wifi_comm_pin(void){ //Configuration of “command complete” rising-edge interrupt used for serial communication with wifi chip (see Appendix B for more details)
 
 	/* Configure PIO clock. */
-	pmc_enable_periph_clk(CMD_PIN_ID);
+	//pmc_enable_periph_clk(CMD_PIN_ID);
 
 	/* Adjust PIO debounce filter using a 10 Hz filter. */
-	pio_set_debounce_filter(WEB_SETUP_BTN_PIO, CMD_PIN_MSK, 10);
+	//pio_set_debounce_filter(WEB_SETUP_BTN_PIO, CMD_PIN_MSK, 10);
 
 	/* Initialize PIO interrupt handler, see PIO definition in conf_board.h
 	**/
@@ -142,17 +109,17 @@ void configure_wifi_comm_pin(void){ //Configuration of “command complete” rising
    NVIC_EnableIRQ((IRQn_Type)CMD_PIN_ID);
 
    /* Enable PIO interrupt lines. */
-   pio_enable_interrupt(CMD_PIN_PIO, WEB_SETUP_BTN_MSK);
+   //pio_enable_interrupt(CMD_PIN_PIO, WEB_SETUP_BTN_MSK);
 }
 
 
 void configure_wifi_web_setup_pin(void){  //Configuration of button interrupt to initiate web setup.
 	
 	/* Configure PIO clock. */
-	pmc_enable_periph_clk(WEB_SETUP_BTN_ID);
+	//pmc_enable_periph_clk(WEB_SETUP_BTN_ID);
 
 	/* Adjust PIO debounce filter using a 10 Hz filter. */
-	pio_set_debounce_filter(WEB_SETUP_BTN_PIO, WEB_SETUP_BTN_MSK, 10);
+	//pio_set_debounce_filter(WEB_SETUP_BTN_PIO, WEB_SETUP_BTN_MSK, 10);
 
 	/* Initialize PIO interrupt handler, see PIO definition in conf_board.h
 	**/
@@ -163,7 +130,7 @@ void configure_wifi_web_setup_pin(void){  //Configuration of button interrupt to
    NVIC_EnableIRQ((IRQn_Type)WEB_SETUP_BTN_ID);
 
    /* Enable PIO interrupt lines. */
-   pio_enable_interrupt(WEB_SETUP_BTN_PIO, WEB_SETUP_BTN_MSK);
+   //pio_enable_interrupt(WEB_SETUP_BTN_PIO, WEB_SETUP_BTN_MSK);
 	
 }
 
@@ -182,16 +149,9 @@ void wifi_command_response_handler(uint32_t ul_id, uint32_t ul_mask){//Handler f
 
 void process_incoming_byte_wifi(uint8_t in_byte){  //Stores every incoming byte (in byte) from the AMW136 in a buffer.
 	
-	unsigned char tmphead;
-	/* calculate buffer index */
-	tmphead = ( UART_RxHead + 1 ) & UART_RX_BUFFER_MASK;
-	UART_RxHead = tmphead; /* store new index */
-	if ( tmphead == UART_RxTail )
-	{
-		/* ERROR! Receive buffer overflow */
-	}
 	
-	UART_RxBuf[tmphead] = in_byte; /* store received data in buffer */
+	UART_RxBuf[RxBuff_count++] = in_byte; /* store received data in buffer */
+	//usart_putchar(BOARD_USART, in_byte); //echo 
 	
 	
 }
@@ -209,17 +169,16 @@ void write_wifi_command(char* comm, uint8_t cnt){
 	//Write command to AMW136
 	usart_write_line(BOARD_USART, comm);
 	
-	//Wait until timeout or ack 
+	//Wait until timeout or response of the AMW104
 	while(counts<cnt){
 		
-		if(strncmp(UART_RxBuf, "ack", strlen("ack")) == 0) {
-			printf("AMW136 received the data")
+		if(!UART_RxBuf[RxBuff_count+1] == 0) { //find better way to know when chip has sent command back
+			printf("AMW136 received the data");
 			break;
 		}
 	}
-	
 	if(counts>cnt){
-		printf("timeout happened")
+		printf("timeout happened");
 	}
 	
 }
@@ -230,6 +189,11 @@ void process_data_wifi(void){
 	in the buffer filled by process incoming byte wifi. This processing should be looking for certain
 	responses that the AMW136 should give, such as “start transfer” when it is ready to receive the
 	image. */
+	
+	/**Commands to parse and check:
+		-Chip has a connection
+		-Web setup flag
+		-...
 	
 	if (strncmp(UART_RxBuf, "start transfer", strlen("start transfer")) == 0){
 		

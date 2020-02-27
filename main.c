@@ -30,10 +30,11 @@
  */
 #include <asf.h>
 #include "timer_interface.h"
-//#include "wifi.h"
+#include "wifi.h"
 #include "camera.h"
 #include "conf_board.h"
 #include "conf_clock.h"
+
 
 #define LED PIO_PA19_IDX
 
@@ -48,17 +49,19 @@ int main (void)
 	board_init();
 	ioport_init();  //Enable IOPORT and GPIO service in the ASFW
 	
+	char test_cmd[] = "test\n";
 	ioport_set_pin_dir(LED, IOPORT_DIR_OUTPUT);
 	
 	//Configure Timer and start it. Configure WiFi, USART, Command pin and Web Setup pin
 	configure_tc();  //Use timer_interface.c function and enable Timer Clock drivers in the ASFW
 	
-	//configure_usart_wifi(); //Enable USART drivers and services + PDC for buffer (Unsure about it)
-	//wifi_init(); Reset the WiFi and wait for it to connect, disable command prompt (>) and echo 
-	//configure_wifi_comm_pin();
-	//configure_wifi_web_setup_pin();
+	configure_usart_wifi(); //Enable USART drivers and services 
+	configure_wifi_comm_pin();
+	configure_wifi_web_setup_pin();
 	init_camera(); //Enable PIO 
 	configure_camera();
+	
+	//wifi_init(); Reset the WiFi and wait for it to connect, disable command prompt (>) and echo 
 	
 	//Wait for connection while listening to wifi web set up flag
 	//while(!reset_wifi()){
@@ -69,7 +72,6 @@ int main (void)
 		//}
 	//}
 	
-	//ioport_set_pin_level(LED,true);
 	
 	/* Infinite while loop */
 	while(1){
@@ -80,6 +82,8 @@ int main (void)
 		delay_ms(300);
 		
 		//ioport_set_pin_level(LED,false);
+		
+		//usart_write_line(BOARD_USART, test_cmd);
 		
 		start_capture();
 		

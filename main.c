@@ -35,37 +35,52 @@
 #include "conf_board.h"
 #include "conf_clock.h"
 
+#define LED PIO_PA19_IDX
+
+
+
 
 int main (void)
 {
 	/* Insert system clock initialization code here (sysclk_init()). */
 
+	sysclk_init();  //Enable System Clock Service in ASF Wizard and choose clock in config/conf_clock.h (Use PLLA for SYSCLK and 120MHz)
 	board_init();
-	sysclk_init();  //Enable System Clock Service in ASF Wizard and choose clock in config/conf_clock.h
 	ioport_init();  //Enable IOPORT and GPIO service in the ASFW
+	
+	ioport_set_pin_dir(LED, IOPORT_DIR_OUTPUT);
 	
 	//Configure Timer and start it. Configure WiFi, USART, Command pin and Web Setup pin
 	configure_tc();  //Use timer_interface.c function and enable Timer Clock drivers in the ASFW
 	
-	configure_usart_wifi(); //Enable USART drivers and services + PDC for buffer (Unsure about it)
+	//configure_usart_wifi(); //Enable USART drivers and services + PDC for buffer (Unsure about it)
 	//wifi_init(); Reset the WiFi and wait for it to connect, disable command prompt (>) and echo 
-	configure_wifi_comm_pin();
-	configure_wifi_web_setup_pin();
-	init_camera(); //Enable PIO and OV7740 drivers
-	configure_camera();
+	//configure_wifi_comm_pin();
+	//configure_wifi_web_setup_pin();
+	init_camera(); //Enable PIO 
+	//configure_camera();
 	
 	//Wait for connection while listening to wifi web set up flag
-	while(!reset_wifi()){
+	//while(!reset_wifi()){
 		
 		//check for web setup flag 
-		if(web_setup_flag){
+	//	if(web_setup_flag){
 			//web setup
-		}
-	}
+		//}
+	//}
 	
+	//ioport_set_pin_level(LED,true);
 	
 	/* Infinite while loop */
 	while(1){
+		
+		ioport_toggle_pin_level(LED);
+		
+		delay_ms(300);
+		
+		//ioport_set_pin_level(LED,false);
+		
+		//start_capture();
 		
 		/*
 		//check for web setup flag

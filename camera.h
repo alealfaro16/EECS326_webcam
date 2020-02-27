@@ -1,13 +1,15 @@
 /*
  * camera.h
  *
- * Created: 2/23/2020 7:47:09 PM
+ * Created: 2/26/2020 4:10:58 PM
  *  Author: ece-lab3
  */ 
 
 
 #ifndef CAMERA_H_
 #define CAMERA_H_
+
+#include "asf.h"
 
 /* TWI board defines. */
 #define ID_BOARD_TWI                   ID_TWI0
@@ -41,6 +43,5 @@ void init_camera(void);
 void configure_camera(void);
 uint8_t start_capture(void);
 uint8_t find_image_len(void);
-
 
 #endif /* CAMERA_H_ */

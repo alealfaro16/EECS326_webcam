@@ -7,7 +7,7 @@
 
 #include <string.h>
 #include "asf.h"
-#include "stdio_serial.h"
+//#include "stdio_serial.h"
 #include "conf_board.h"
 #include "conf_clock.h"
 #include "wifi.h"
@@ -125,7 +125,7 @@ static void configure_usart_wifi(void)
 }
 
 
-void configure_wifi_comm_pin(void){ //Configuration of ‚Äúcommand complete‚Äù rising-edge interrupt used for serial communication with wifi chip (see Appendix B for more details)
+void configure_wifi_comm_pin(void){ //Configuration of ìcommand completeî rising-edge interrupt used for serial communication with wifi chip (see Appendix B for more details)
 
 	/* Configure PIO clock. */
 	pmc_enable_periph_clk(CMD_PIN_ID);
@@ -176,7 +176,7 @@ void wifi_web_setup_handler(uint32_t ul_id, uint32_t ul_mask){ //Should set a fl
 	web_setup = true;
 }
 
-void wifi_command_response_handler(uint32_t ul_id, uint32_t ul_mask){//Handler for ‚Äúcommand complete‚Äù rising-edge interrupt from AMW136. When this is triggered, it is time to process the response of the AMW136.
+void wifi_command_response_handler(uint32_t ul_id, uint32_t ul_mask){//Handler for ìcommand completeî rising-edge interrupt from AMW136. When this is triggered, it is time to process the response of the AMW136.
 	
 }
 
@@ -228,7 +228,7 @@ void process_data_wifi(void){
 	
 	/*Processes the response of the AMW136, which should be stored
 	in the buffer filled by process incoming byte wifi. This processing should be looking for certain
-	responses that the AMW136 should give, such as ‚Äústart transfer‚Äù when it is ready to receive the
+	responses that the AMW136 should give, such as ìstart transferî when it is ready to receive the
 	image. */
 	
 	if (strncmp(UART_RxBuf, "start transfer", strlen("start transfer")) == 0){
@@ -238,20 +238,20 @@ void process_data_wifi(void){
 	
 }
 
-void write_image_to_file(void){
+/*void write_image_to_file(void){
 	
 	/*Writes an image from the SAM4S8B to the AMW136. If the
 	length of the image is zero (i.e. the image is not valid), return. Otherwise, follow this protocol
 	(illustrated in Appendix B):
 	
-	1. Issue the command ‚Äúimage transfer xxxx‚Äù, where xxxx is replaced by the length of the
+	1. Issue the command ìimage transfer xxxxî, where xxxx is replaced by the length of the
 	image you want to transfer.
 	
 	2. After the AMW136 acknowledges that it received your command, start streaming the image.
 	
-	3. After the image is done sending, the AMW136 should say ‚ÄúComplete‚Äù. However, the ‚Äúcommand
-	complete‚Äù pin will not have a rising edge, so it will be hard to sense. You can still try
-	to sense it before moving on, or simply insert a slight delay. */
+	3. After the image is done sending, the AMW136 should say ìCompleteî. However, the ìcommand
+	completeî pin will not have a rising edge, so it will be hard to sense. You can still try
+	to sense it before moving on, or simply insert a slight delay. 
 	
 	//timeout limit (in secs)
 	int cnt = 5;
@@ -260,7 +260,7 @@ void write_image_to_file(void){
 		printf("No image");
 		return;
 	}
-	else{
+	else{ 
 		//Send command to signal image transfer as well as the length of the image
 		char* comm = strcat("image_transfer ",char*(image_len));
 		write_wifi_command(comm,cnt);
@@ -276,5 +276,4 @@ void write_image_to_file(void){
 			
 		}
 		
-	}
-}
+	} */

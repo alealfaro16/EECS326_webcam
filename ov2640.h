@@ -409,4 +409,5 @@ uint32_t ov_restore_manual(volatile uint32_t *p_backup_addr, uint32_t ul_size);
  * \endcode
  */
 
+
 #endif /* OV2640_H_INCLUDED */

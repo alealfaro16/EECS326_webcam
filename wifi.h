@@ -1,7 +1,7 @@
 /*
  * wifi.h
  *
- * Created: 2/23/2020 1:35:43 PM
+ * Created: 2/26/2020 4:11:27 PM
  *  Author: ece-lab3
  */ 
 
@@ -9,6 +9,7 @@
 #ifndef WIFI_H_
 #define WIFI_H_
 
+#include "asf.h"
 
 /** Size of the receive buffer used by the PDC, in bytes. */
 #define UART_RX_BUFFER_SIZE 128 /* 1,2,4,8,16,32,64,128 or 256 bytes */
@@ -62,7 +63,6 @@ void configure_wifi_comm_pin(void);
 void configure_wifi_web_setup_pin(void);
 void write_wifi_command(char* comm, uint8_t cnt);
 void write_image_to_file(void);
-
 
 
 #endif /* WIFI_H_ */

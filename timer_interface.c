@@ -6,6 +6,7 @@
  */ 
 
 #include "timer_interface.h"
+#include "asf.h"
 
 void TC0_Handler(void)
 {

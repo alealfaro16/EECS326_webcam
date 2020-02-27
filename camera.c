@@ -6,6 +6,8 @@
  */ 
 
 #include "camera.h"
+#include "asf.h"
+#include "ov2640.h"
 
 /* Uncomment this macro to work in black and white mode */
 #define DEFAULT_MODE_COLORED
@@ -49,7 +51,7 @@ static volatile uint32_t g_ul_vsync_flag = false;
  * \brief Handler for vertical synchronisation using by the OV7740 image
  * sensor.
  */
-static void vsync_handler(uint32_t ul_id, uint32_t ul_mask)
+ void vsync_handler(uint32_t ul_id, uint32_t ul_mask)
 {
 	unused(ul_id);
 	unused(ul_mask);
@@ -61,7 +63,7 @@ static void vsync_handler(uint32_t ul_id, uint32_t ul_mask)
 /**
  * \brief Intialize Vsync_Handler.
  */
-static void init_vsync_interrupts(void)
+ void init_vsync_interrupts(void)
 {
 	/* Initialize PIO interrupt handler, see PIO definition in conf_board.h
 	**/
@@ -80,7 +82,7 @@ static void init_vsync_interrupts(void)
  * \param p_pio PIO instance to be configured in PIO capture mode.
  * \param ul_id Corresponding PIO ID.
  */
-static void pio_capture_init(Pio *p_pio, uint32_t ul_id)
+ void pio_capture_init(Pio *p_pio, uint32_t ul_id)
 {
 	/* Enable periphral clock */
 	pmc_enable_periph_clk(ul_id);
@@ -114,7 +116,7 @@ static void pio_capture_init(Pio *p_pio, uint32_t ul_id)
  * \param p_uc_buf Buffer address where captured data must be stored.
  * \param ul_size Data frame size.
  */
-static uint8_t pio_capture_to_buffer(Pio *p_pio, uint8_t *uc_buf,
+ uint8_t pio_capture_to_buffer(Pio *p_pio, uint8_t *uc_buf,
 		uint32_t ul_size)
 {
 	/* Check if the first PDC bank is free */
@@ -188,8 +190,14 @@ uint8_t start_capture(void)
 /**
  * \brief Initialize PIO capture and the OV7740 image sensor.
  */
-static void init_camera(void)
+ void init_camera(void)
 {
+	
+	/* OV7740 send image sensor data at 24 Mhz. For best performances, PCK0
+	 * which will capture OV7740 data, has to work at 24Mhz. It's easier and
+	 * optimum to use one PLL for core (PLLB) and one other for PCK0 (PLLA).
+	 */
+	pmc_enable_pllbck(7, 0x1, 1); /* PLLB work at 96 Mhz */
 
 	/* Init Vsync handler*/
 	init_vsync_interrupts();
@@ -197,17 +205,15 @@ static void init_camera(void)
 	/* Init PIO capture*/
 	pio_capture_init(OV7740_DATA_BUS_PIO, OV7740_DATA_BUS_ID);
 
-	/* Init PCK0 to work at 24 Mhz */
+	/* Init PCK1 to work at 24 Mhz */
 	/* 96/4=24 Mhz */
-	PMC->PMC_PCK[0] = (PMC_PCK_PRES_CLK_4 | PMC_PCK_CSS_PLLA_CLK);
-	PMC->PMC_SCER = PMC_SCER_PCK0;
-	while (!(PMC->PMC_SCSR & PMC_SCSR_PCK0)) {
+	PMC->PMC_PCK[1] = (PMC_PCK_PRES_CLK_4 | PMC_PCK_CSS_PLLB_CLK); //Unsure about this
+	PMC->PMC_SCER = PMC_SCER_PCK1;
+	while (!(PMC->PMC_SCSR & PMC_SCSR_PCK1)) {
 	}
 
 	configure_twi();
 
-	/* Wait 3 seconds to let the image sensor to adapt to environment */
-	delay_ms(3000);
 }
 
 void configure_twi(void){
@@ -237,10 +243,13 @@ void configure_camera(void){
 
 	/* ov7740 configuration */
 	ov_configure(BOARD_TWI, QVGA_YUV422_20FPS);
+	
+	/* Wait 3 seconds to let the image sensor to adapt to environment */
+	delay_ms(3000);
 }
 
 
-uint8_t find_image_len(void){  //Finds image length based on JPEG protocol. Returns 1 on success (i.e. able to find ‚Äúend of image‚Äù and ‚Äústart of image‚Äù markers), 0 on error.
+uint8_t find_image_len(void){  //Finds image length based on JPEG protocol. Returns 1 on success (i.e. able to find ìend of imageî and ìstart of imageî markers), 0 on error.
 	
 	//checks that image in buffer starts with FF D8 FF
 	int *first_ptr =  pointer_dest_buf;

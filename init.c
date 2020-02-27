@@ -12,6 +12,7 @@
 #include <board.h>
 #include <conf_board.h>
 #include "camera.h"
+#include "wifi.h"
 
 void board_init(void)
 {
@@ -30,11 +31,8 @@ void board_init(void)
 	gpio_configure_pin(TWI0_DATA_GPIO, TWI0_DATA_FLAGS);
 	gpio_configure_pin(TWI0_CLK_GPIO, TWI0_CLK_FLAGS);
 
-
-	/* Configure PCK0 pins */
+	/* Configure PCK1 pins */
 	gpio_configure_pin(PIN_PCK1, PIN_PCK1_FLAGS);
-	
-
 	
 	/* Configure Image sensor pins */
 	gpio_configure_pin(OV_RST_GPIO, OV_RST_FLAGS);
@@ -48,5 +46,21 @@ void board_init(void)
 	gpio_configure_pin(OV_DATA_BUS_D5, OV_DATA_BUS_FLAGS);
 	gpio_configure_pin(OV_DATA_BUS_D6, OV_DATA_BUS_FLAGS);
 	gpio_configure_pin(OV_DATA_BUS_D7, OV_DATA_BUS_FLAGS);
+
+	
+	/* Configure USART RXD pin */
+	gpio_configure_pin(PIN_USART0_RXD_IDX, PIN_USART0_RXD_FLAGS);
+	
+	/* Configure USART TXD pin */
+	gpio_configure_pin(PIN_USART0_TXD_IDX, PIN_USART0_TXD_FLAGS);
+	
+	/* Configure Command Complete pin */
+	gpio_configure_pin(CMD_PIN_IDX, CMD_PIN_ATTR);
+	
+	/* Configure web setup pin */
+	gpio_configure_pin(WEB_SETUP_BTN_IDX, WEB_SETUP_BTN_ATTR);
+	
+	
+	//Configure other pins:
 
 }

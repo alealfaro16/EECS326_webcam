@@ -139,10 +139,6 @@
 #define OV_DATA_BUS_TYPE               PIO_INPUT
 #define OV_DATA_BUS_ATTR               PIO_DEFAULT
 
-/** List of Image sensor definitions. */
-#define PINS_OV                        PIN_OV_SW_OVT, PIN_PCK1, PIN_OV_RST
-
-
 /******************************* Parallel Capture definition
  *********************************/
 /** Parallel Capture Mode Data Enable1 */
@@ -151,5 +147,6 @@
 /** Parallel Capture Mode Data Enable2 */
 #define PIN_PIODCEN2                   PIO_PA16
 
+#define MCU_STATUS_LED     PIO_PA19_IDX
 
 #endif // USER_BOARD_H

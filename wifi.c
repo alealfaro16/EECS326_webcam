@@ -12,6 +12,9 @@
 #include "conf_clock.h"
 #include "wifi.h"
 #include "timer_interface.h"
+#include <stdio.h>	/*printf*/
+#include <stdlib.h>	/*malloc*/
+#include <string.h> /*memset*/
 
 
 /** USART FIFO transfer type definition. */
@@ -23,7 +26,10 @@ static unsigned char UART_RxBuf[UART_RX_BUFFER_SIZE];
 static RxBuff_count = 0;
 
 /* Push button information (true if it's triggered and false otherwise) */
-static volatile uint32_t web_setup = false;
+volatile uint32_t web_setup_flag = 0;
+
+/* Set to true when open stream is avalible for webcam (check wifi chip response for it) */
+uint32_t open_streams = 0;
 
 
 /**
@@ -46,8 +52,9 @@ static volatile uint32_t web_setup = false;
 		 //Get byte from USART
 		 usart_getchar(BOARD_USART, (uint32_t *)&byte_buffer);
 		 process_incoming_byte_wifi(byte_buffer);
+		 process_data_wifi();
 	 }
-	
+
 
 }
 
@@ -140,7 +147,7 @@ void wifi_web_setup_handler(uint32_t ul_id, uint32_t ul_mask){ //Should set a fl
 	unused(ul_id);
 	unused(ul_mask);
 
-	web_setup = true;
+	web_setup_flag = true;
 }
 
 void wifi_command_response_handler(uint32_t ul_id, uint32_t ul_mask){//Handler for “command complete” rising-edge interrupt from AMW136. When this is triggered, it is time to process the response of the AMW136.
@@ -156,7 +163,7 @@ void process_incoming_byte_wifi(uint8_t in_byte){  //Stores every incoming byte 
 	
 }
 
-void write_wifi_command(char* comm, uint8_t cnt){
+void write_wifi_command(const char* comm, uint8_t cnt){
 	
 	/*Writes a command (comm) to the AMW136,
 	and waits either for an acknowledgment or a timeout. The timeout can be created by setting the
@@ -173,12 +180,13 @@ void write_wifi_command(char* comm, uint8_t cnt){
 	while(counts<cnt){
 		
 		if(!UART_RxBuf[RxBuff_count+1] == 0) { //find better way to know when chip has sent command back
-			printf("AMW136 received the data");
+			//printf("AMW136 received the data");
 			break;
 		}
 	}
 	if(counts>cnt){
-		printf("timeout happened");
+		//printf("timeout happened");
+		usart_write_line(BOARD_USART, "Timeout!");
 	}
 	
 }
@@ -190,19 +198,29 @@ void process_data_wifi(void){
 	responses that the AMW136 should give, such as “start transfer” when it is ready to receive the
 	image. */
 	
-	/**Commands to parse and check:
+	/*Commands to parse and check:
 		-Chip has a connection
 		-Web setup flag
-		-...
+		-... */
+	char *emptyArray;
+	size_t len = strlen("start transfer");
+	emptyArray = malloc(sizeof(char)*len);
+	memset(emptyArray, '\0', len);
+	emptyArray = slice(UART_RxBuf, len, RxBuff_count - len, RxBuff_count );
 	
-	if (strncmp(UART_RxBuf, "start transfer", strlen("start transfer")) == 0){
+	usart_write_line(BOARD_USART,emptyArray);
+	
+	/**if (strncmp(emptyArray, "start transfer", strlen("start transfer")) == 0){
 		
 		//Start transfer
-	}
+		usart_write_line(BOARD_USART,"Success!");
+	} **/
+	//else if(strncmp(UART_RxBuf, "start transfer", strlen("start transfer")) == 0)
+	
 	
 }
 
-/*void write_image_to_file(void){
+//void write_image_to_file(void){
 	
 	/*Writes an image from the SAM4S8B to the AMW136. If the
 	length of the image is zero (i.e. the image is not valid), return. Otherwise, follow this protocol
@@ -241,3 +259,97 @@ void process_data_wifi(void){
 		}
 		
 	} */
+	
+	
+void wifi_chip_init(void){
+		
+		//brief send commands to setup the wifi chip for webcam application (disable echo, command prompt ,etc) and reset it
+		
+		//Turn off UART0 flow control 
+		write_wifi_command("set uart.flow 0 off \r\n",1);
+		
+		delay_ms(1000);
+		
+		//Set the status indicator LEDs
+		write_wifi_command("set sy i g network 18 \r\n",1);
+		write_wifi_command("set sy i g wlan 20 \r\n",1);
+		write_wifi_command("set sy i g softap 21 \r\n",1);
+		
+		delay_ms(1000);
+		
+		//Disable echo and command prompt
+		write_wifi_command("set sy c e off \r\n",1);
+		write_wifi_command("set sy c p 0 \r\n",1);
+		
+		delay_ms(1000);
+		
+		//Set the rx/tx buffer size to 10000 bytes and the rx:tx ratio to 50%
+		write_wifi_command("set ne b s 10000 \r\n",1);
+		write_wifi_command("set ne b r 50 \r\n",1);
+		
+		delay_ms(1000);
+		
+		//Set the command complete and network gpios and configure them 
+		//write_wifi_command("set gp a 13 cmdCmplt \r\n",1);
+		//write_wifi_command("set gp a 14 netStatus \r\n",1);
+	
+		write_wifi_command("set sy c g 13 \r\n",1);
+		write_wifi_command("set wl n o 14 \r\n",1);
+		
+		delay_ms(1000);
+		
+		//Necessary to save settings
+		write_wifi_command("save \r\n",1);
+		write_wifi_command("reboot \r\n",1);
+		
+		delay_ms(1000);
+		
+		//Reset
+		ioport_set_pin_level(WIFI_RST_PIN,false);
+		delay_ms(300);
+		ioport_set_pin_level(WIFI_RST_PIN,true);
+	
+		
+		
+}
+
+void web_setup(void){
+	
+	//Enter web setup mode
+	write_wifi_command("setup web \r\n",1);
+	
+	//Do other stuff if needed
+}
+
+void clear_rx_buffer(void){
+	
+	memset(UART_RxBuf,0,UART_RX_BUFFER_SIZE);
+}
+
+
+char *slice(char *array_filled, size_t array_size, unsigned int start, unsigned int end){
+	
+	int array_empty_position = 0;
+	int error = 0;
+	
+	/*Bad array size*/
+	if(array_size <= 0){
+		array_size = 10;
+		error = 1;
+	}
+	
+	char *array_empty;
+	array_empty = malloc(sizeof(char) * array_size);
+	memset(array_empty, '\0', array_size);
+	
+	if(error != 0 || (start >= array_size || end >= array_size)){
+		return array_empty;
+	}
+	
+	for(int i=start; i<end; i++){
+		*(array_empty+array_empty_position) = array_filled[i];
+		array_empty_position++;
+	}
+	
+	return array_empty;
+}

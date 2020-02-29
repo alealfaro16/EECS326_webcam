@@ -72,8 +72,6 @@ void write_wifi_command(const char* comm, uint8_t cnt);
 void write_image_to_file(void);
 void wifi_chip_init(void);
 void web_setup(void);
-void clear_rx_buffer(void);
-char *slice(char *array_filled, size_t array_size, unsigned int start, unsigned int end);
 
  extern uint32_t open_streams;
  extern volatile uint32_t web_setup_flag;

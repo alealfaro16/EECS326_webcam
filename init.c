@@ -60,6 +60,17 @@ void board_init(void)
 	/* Configure web setup pin */
 	gpio_configure_pin(WEB_SETUP_BTN_IDX, WEB_SETUP_BTN_ATTR);
 	
+	/*Configure network status pin*/
+	ioport_set_pin_dir(NET_STATUS_PIN, IOPORT_DIR_INPUT);
+	ioport_set_pin_mode(NET_STATUS_PIN,IOPORT_MODE_PULLDOWN);
+	
+	/*Configure wifi reset pin (drive LOW to reset wifi chip)*/
+	ioport_set_pin_dir(WIFI_RST_PIN,IOPORT_DIR_OUTPUT);
+	ioport_set_pin_level(WIFI_RST_PIN, true);
+	
+	/*Configure LED MCU status pin*/
+	ioport_set_pin_dir(MCU_STATUS_LED, IOPORT_DIR_OUTPUT);
+	
 	
 	//Configure other pins:
 

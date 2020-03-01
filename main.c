@@ -51,11 +51,11 @@ int main (void)
 	//Configure Timer and start it. Configure WiFi, USART, Command pin and Web Setup pin
 	configure_tc();  //Use timer_interface.c function and enable Timer Clock drivers in the ASFW
 	
-	configure_usart_wifi(); //Enable USART drivers and services 
-	configure_wifi_comm_pin();
-	configure_wifi_web_setup_pin();
-	//init_camera(); //Enable PIO 
-	//configure_camera();
+	//configure_usart_wifi(); //Enable USART drivers and services 
+	//configure_wifi_comm_pin();
+	//configure_wifi_web_setup_pin();
+	init_camera(); //Enable PIO 
+	configure_camera();
 	
 	//wifi_chip_init(); // Reset the WiFi and wait for it to connect, disable command prompt (>) and echo 
 	
@@ -84,7 +84,8 @@ int main (void)
 		
 		//process_data_wifi();
 		
-		//start_capture();
+		uint8_t capture = start_capture();
+		usart_putchar(BOARD_USART,capture);
 		
 		//check for web setup flag
 		/**if(web_setup_flag){

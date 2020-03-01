@@ -75,6 +75,6 @@ void web_setup(void);
 
  extern uint32_t open_streams;
  extern volatile uint32_t web_setup_flag;
-
+ extern volatile uint32_t command_complete;
 
 #endif /* WIFI_H_ */

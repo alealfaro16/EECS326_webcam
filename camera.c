@@ -40,7 +40,7 @@ uint16_t pic_rows = IMAGE_HEIGHT;
 //#endif
 
 //Image length
-static uint32_t img_length = 0;
+uint32_t image_len = 0;
 
 
 /* Vsync signal information (true if it's triggered and false otherwise) */
@@ -138,7 +138,7 @@ static void vsync_handler(uint32_t ul_id, uint32_t ul_mask)
 /**
  * \brief Start picture capture.
  */
-void start_capture(void)
+uint8_t start_capture(void)
 {
 	/* Set capturing destination address*/
 	pointer_dest_buf = (uint8_t *)CAP_DEST;
@@ -171,11 +171,6 @@ void start_capture(void)
 		
 	}
 	
-	//Find image length
-	//if(!find_image_len()){
-	
-	//	return 0;
-	//}
 	
 	/* Disable pio capture*/
 	pio_capture_disable(OV_DATA_BUS_PIO);
@@ -183,8 +178,16 @@ void start_capture(void)
 	/* Reset vsync flag*/
 	g_ul_vsync_flag = false;
 	
-	return;
-	//return 1;
+	//Find image length
+	if(!find_image_len()){
+		
+		return 0;
+	}
+	else{
+		
+		return 1;
+	}
+	
 }
 
 
@@ -255,26 +258,28 @@ void configure_camera(void){
 
 uint8_t find_image_len(void){  //Finds image length based on JPEG protocol. Returns 1 on success (i.e. able to find “end of image” and “start of image” markers), 0 on error.
 	
-	//checks that image in buffer starts with FF D8 FF
-	int *first_ptr =  pointer_dest_buf;
-	int *second_ptr = first_ptr++;
-	int *third_ptr = second_ptr++;
+	//Look at example on they access the PIO buffer 
 	
-	img_length = 0;
+	//checks that image in buffer starts with FF D8 FF
+	uint8_t *first_ptr =  pointer_dest_buf;  
+	uint8_t *second_ptr = first_ptr++;
+	uint8_t *third_ptr = second_ptr++;
+	
+	image_len = 0;
 	uint32_t found_end = false;
 	
-	if(*first_ptr == "FF" && *second_ptr == "D8" && *third_ptr  == "FF"){
+	if(*(int*)first_ptr == 15 && *(int*)second_ptr == 15 && *(int*)third_ptr  == 13){
 		
-		img_length = 3;
+		image_len = 3;
 		int *ptr = third_ptr++;
 		
 		while(!found_end){
 			//Loop until finding the end markers FF D9 of a jpeg image
-			if(*ptr == "FF" && *ptr++ == "D9"){	
+			if(*(int*)ptr == "15" && *(int*)ptr++ == "15"){	
 				found_end = true;
 			}
 			
-			img_length++;
+			image_len++;
 		}
 		
 		return 1;

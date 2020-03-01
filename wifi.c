@@ -11,6 +11,7 @@
 #include "conf_board.h"
 #include "conf_clock.h"
 #include "wifi.h"
+#include "camera.h"
 #include "timer_interface.h"
 #include <stdio.h>	/*printf*/
 #include <stdlib.h>	/*malloc*/
@@ -25,11 +26,14 @@ static uint8_t byte_buffer = 0;
 static unsigned char UART_RxBuf[UART_RX_BUFFER_SIZE];
 static RxBuff_count = 0;
 
-/* Push button information (true if it's triggered and false otherwise) */
-volatile uint32_t web_setup_flag = 0;
+/* Web setup flag (true if it's triggered and false otherwise) */
+volatile uint32_t web_setup_flag = true;
+
+/* Command complete flag (true if it's triggered and false otherwise) */
+volatile uint32_t command_complete = true;
 
 /* Set to true when open stream is avalible for webcam (check wifi chip response for it) */
-uint32_t open_streams = 0;
+uint32_t open_streams = false;
 
 
 /**
@@ -152,13 +156,18 @@ void wifi_web_setup_handler(uint32_t ul_id, uint32_t ul_mask){ //Should set a fl
 
 void wifi_command_response_handler(uint32_t ul_id, uint32_t ul_mask){//Handler for “command complete” rising-edge interrupt from AMW136. When this is triggered, it is time to process the response of the AMW136.
 	
+	unused(ul_id);
+	unused(ul_mask);
+
+	command_complete = true;
+	
 }
 
 void process_incoming_byte_wifi(uint8_t in_byte){  //Stores every incoming byte (in byte) from the AMW136 in a buffer.
 	
 	
 	UART_RxBuf[RxBuff_count++] = in_byte; /* store received data in buffer */
-	//usart_putchar(BOARD_USART, in_byte); //echo 
+	usart_putchar(BOARD_USART, in_byte); //echo 
 	
 	
 }
@@ -202,63 +211,71 @@ void process_data_wifi(void){
 		-Chip has a connection
 		-Web setup flag
 		-... */
-	char *emptyArray;
-	size_t len = strlen("start transfer");
-	emptyArray = malloc(sizeof(char)*len);
-	memset(emptyArray, '\0', len);
-	emptyArray = slice(UART_RxBuf, len, RxBuff_count - len, RxBuff_count );
 	
-	usart_write_line(BOARD_USART,emptyArray);
-	
-	/**if (strncmp(emptyArray, "start transfer", strlen("start transfer")) == 0){
+	if (!strstr(UART_RxBuf, "start transfer") == NULL){
 		
-		//Start transfer
-		usart_write_line(BOARD_USART,"Success!");
-	} **/
-	//else if(strncmp(UART_RxBuf, "start transfer", strlen("start transfer")) == 0)
+		//Start transfer flag?
+		//write_image_to_file();
+		//usart_write_line(BOARD_USART,"Success!");
+		memset(UART_RxBuf,"0",UART_RX_BUFFER_SIZE);
+		
+	}
+	//Check for open streams
+	else if(!strstr(UART_RxBuf, "[Opened: 0]") == 0){
+		
+		open_streams = true;
+		memset(UART_RxBuf,"0",UART_RX_BUFFER_SIZE);
+	}
+	else if(!strstr(UART_RxBuf, "Complete") == 0){
+		
+		//Image transfer has been completed, delay and restart loop
+		delay_ms(50);
+	}
 	
 	
 }
 
-//void write_image_to_file(void){
+void write_image_to_file(void){
 	
 	/*Writes an image from the SAM4S8B to the AMW136. If the
 	length of the image is zero (i.e. the image is not valid), return. Otherwise, follow this protocol
-	(illustrated in Appendix B):
+	(illustrated in Appendix B): */
 	
-	1. Issue the command “image transfer xxxx”, where xxxx is replaced by the length of the
-	image you want to transfer.
-	
-	2. After the AMW136 acknowledges that it received your command, start streaming the image.
-	
-	3. After the image is done sending, the AMW136 should say “Complete”. However, the “command
-	complete” pin will not have a rising edge, so it will be hard to sense. You can still try
-	to sense it before moving on, or simply insert a slight delay. 
-	
-	//timeout limit (in secs)
-	int cnt = 5;
-	
+	int timeout = 3; //3 timeout for command complete 
 	if(image_len == 0){
-		printf("No image");
 		return;
 	}
-	else{ 
-		//Send command to signal image transfer as well as the length of the image
-		char* comm = strcat("image_transfer ",char*(image_len));
-		write_wifi_command(comm,cnt);
-		//verify that AMW136 has gotten the command 
-		while(counts < cnt){}
-		
-		if(ack == 0){
-			//AMW136 did not receive the command
-			return;
+	
+	/*1. Issue the command “image transfer xxxx”, where xxxx is replaced by the length of the
+	image you want to transfer.*/
+	
+	char* comm = strcat("image_transfer ",image_len); 
+	write_wifi_command(comm,1);
+	
+	
+	//2. After the AMW136 acknowledges that it received your command, start streaming the image.
+	counts = 0;
+	while(!command_complete){
+		if(counts>timeout){
+		return; //break the loop
 		}
-		else{
-			//Start the image transfer
-			
-		}
+	}
+	//Stream image
+	int i;
+	char* image_start = CAP_DEST;
+	for(i=0;i<image_len;i++){
+		usart_putchar(BOARD_USART, &image_start);//Unsure of how to access the buffer and start streaming bit by bit
+		image_start++;
+	}
+	
+	/*3. After the image is done sending, the AMW136 should say “Complete”. However, the “command
+	complete” pin will not have a rising edge, so it will be hard to sense. You can still try
+	to sense it before moving on, or simply insert a slight delay. */
+	
+	//Should be done automatically by process_wifi_data()
+	
 		
-	} */
+} 
 	
 	
 void wifi_chip_init(void){
@@ -319,37 +336,5 @@ void web_setup(void){
 	write_wifi_command("setup web \r\n",1);
 	
 	//Do other stuff if needed
-}
+} 
 
-void clear_rx_buffer(void){
-	
-	memset(UART_RxBuf,0,UART_RX_BUFFER_SIZE);
-}
-
-
-char *slice(char *array_filled, size_t array_size, unsigned int start, unsigned int end){
-	
-	int array_empty_position = 0;
-	int error = 0;
-	
-	/*Bad array size*/
-	if(array_size <= 0){
-		array_size = 10;
-		error = 1;
-	}
-	
-	char *array_empty;
-	array_empty = malloc(sizeof(char) * array_size);
-	memset(array_empty, '\0', array_size);
-	
-	if(error != 0 || (start >= array_size || end >= array_size)){
-		return array_empty;
-	}
-	
-	for(int i=start; i<end; i++){
-		*(array_empty+array_empty_position) = array_filled[i];
-		array_empty_position++;
-	}
-	
-	return array_empty;
-}

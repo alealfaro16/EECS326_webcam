@@ -1,13 +1,13 @@
 # Webcam firmware 
 
 
-Questions to ask Ilya:
+Questions to ask:
 
-How does is the USART RX buffer supposed to be setup? Using PDC (Peripheral DMA)? Or another method (FIFO)? FIFO
+How big should the image buffer be?
 
-If using FIFO then how big should the buffer be? 1000, clear buffer with for loop, setting every entry to zero.
+Where should the memory address start for the pdc buffer? In example code it is 0x6000... but IRAM starts at 0x2000... and when I change it gives me an error.
 
-What should the size of the image buffer be? Image width and height specifically. Not known yet. Look at board.h files for camera configurations (hard)
+How do we access the elements of that buffer to find the length of the image/send it to the wifi chip?
 
 Notes on enclosure:
 Make walls 1mm thick

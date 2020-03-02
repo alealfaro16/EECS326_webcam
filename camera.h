@@ -16,14 +16,9 @@
 #define BOARD_TWI                      TWI0
 #define BOARD_TWI_IRQn                 TWI0_IRQn
 
-/* iRAM board defines. */
-#define SRAM_BASE                      (0x60000000UL) // SRAM adress
-#define SRAM_CS                        (0UL)
-#define CAP_DEST                       SRAM_BASE
-
 /* Image sensor board defines. */
-#define IMAGE_WIDTH                    (640UL) 
-#define IMAGE_HEIGHT                   (480UL)
+#define IMAGE_BUFFER_SIZE                    100000 
+
 // Image sensor VSYNC pin.
 #define OV_VSYNC_GPIO              PIO_PA15_IDX
 #define OV_VSYNC_PIO	           PIOA
@@ -53,7 +48,11 @@ void init_camera(void);
 void configure_camera(void);
 uint8_t start_capture(void);
 uint8_t find_image_len(void);
+//void write_image_to_file(void);
+void write_image_to_file(uint8_t *real_img);
 
 extern uint32_t image_len;
+extern uint8_t image_buffer[IMAGE_BUFFER_SIZE];
+extern uint32_t img_start_pointer;
 
 #endif /* CAMERA_H_ */

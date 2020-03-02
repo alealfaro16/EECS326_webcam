@@ -69,7 +69,7 @@ void configure_usart_wifi(void);
 void configure_wifi_comm_pin(void);
 void configure_wifi_web_setup_pin(void);
 void write_wifi_command(const char* comm, uint8_t cnt);
-void write_image_to_file(void);
+//void write_image_to_file(void);
 void wifi_chip_init(void);
 void web_setup(void);
 

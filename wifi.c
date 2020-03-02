@@ -235,47 +235,7 @@ void process_data_wifi(void){
 	
 }
 
-void write_image_to_file(void){
-	
-	/*Writes an image from the SAM4S8B to the AMW136. If the
-	length of the image is zero (i.e. the image is not valid), return. Otherwise, follow this protocol
-	(illustrated in Appendix B): */
-	
-	int timeout = 3; //3 timeout for command complete 
-	if(image_len == 0){
-		return;
-	}
-	
-	/*1. Issue the command “image transfer xxxx”, where xxxx is replaced by the length of the
-	image you want to transfer.*/
-	
-	char* comm = strcat("image_transfer ",image_len); 
-	write_wifi_command(comm,1);
-	
-	
-	//2. After the AMW136 acknowledges that it received your command, start streaming the image.
-	counts = 0;
-	while(!command_complete){
-		if(counts>timeout){
-		return; //break the loop
-		}
-	}
-	//Stream image
-	int i;
-	char* image_start = CAP_DEST;
-	for(i=0;i<image_len;i++){
-		usart_putchar(BOARD_USART, &image_start);//Unsure of how to access the buffer and start streaming bit by bit
-		image_start++;
-	}
-	
-	/*3. After the image is done sending, the AMW136 should say “Complete”. However, the “command
-	complete” pin will not have a rising edge, so it will be hard to sense. You can still try
-	to sense it before moving on, or simply insert a slight delay. */
-	
-	//Should be done automatically by process_wifi_data()
-	
-		
-} 
+// void write_image_to_file(void)
 	
 	
 void wifi_chip_init(void){

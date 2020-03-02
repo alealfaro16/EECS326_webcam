@@ -8,6 +8,11 @@
 #include "camera.h"
 #include "asf.h"
 #include "ov2640.h"
+#include "wifi.h"
+#include "timer_interface.h"
+#include <stdio.h>	/*printf*/
+#include <stdlib.h>	/*malloc*/
+#include <string.h> /*memset*/
 
 /* Uncomment this macro to work in black and white mode */
 #define DEFAULT_MODE_COLORED
@@ -19,28 +24,14 @@
 /* TWI clock frequency in Hz (400KHz) */
 #define TWI_CLK     (400000UL)
 
-/* Pointer to the image data destination buffer */
-uint8_t *pointer_dest_buf;
-
-/* Rows size of capturing picture */
-uint16_t pic_rows = IMAGE_HEIGHT;
-
-/* Define display function and line size of captured picture according to the */
-/* current mode (color or black and white) */
-//#ifdef DEFAULT_MODE_COLORED
-//#define _display() draw_frame_yuv_color_int()
-
-/* (IMAGE_WIDTH *2 ) because ov7740 use YUV422 format in color mode */
-/* (draw_frame_yuv_color_int for more details) */
-//uint16_t g_us_cap_line = (IMAGE_WIDTH * 2);
-//#else
-//#define _display() draw_frame_yuv_bw8()
-
-//uint16_t g_us_cap_line = (IMAGE_WIDTH);
-//#endif
+/* Image data destination buffer */
+uint8_t image_buffer[IMAGE_BUFFER_SIZE];
 
 //Image length
 uint32_t image_len = 0;
+
+//Image start pointer
+uint32_t img_start_pointer = 0;
 
 
 /* Vsync signal information (true if it's triggered and false otherwise) */
@@ -112,7 +103,7 @@ static void vsync_handler(uint32_t ul_id, uint32_t ul_mask)
 /**
  * \brief Capture OV7740 data to a buffer.
  *
- * \param p_pio PIO instance which will capture data from OV7740 iamge sensor.
+ * \param p_pio PIO instance which will capture data from OV7740 image sensor.
  * \param p_uc_buf Buffer address where captured data must be stored.
  * \param ul_size Data frame size.
  */
@@ -140,11 +131,12 @@ static void vsync_handler(uint32_t ul_id, uint32_t ul_mask)
  */
 uint8_t start_capture(void)
 {
+	
 	/* Set capturing destination address*/
-	pointer_dest_buf = (uint8_t *)CAP_DEST;
-
-	/* Set cap_rows value*/
-	pic_rows = IMAGE_HEIGHT;
+	uint8_t *g_p_uc_cap_dest_buf = (uint8_t *)image_buffer;
+	
+	//Clear buffer
+	memset(image_buffer,"0",IMAGE_BUFFER_SIZE);
 
 	/* Enable vsync interrupt*/
 	pio_enable_interrupt(OV_VSYNC_PIO, OV_VSYNC_MASK);
@@ -163,10 +155,10 @@ uint8_t start_capture(void)
 
 	/* Capture data and send it to external iRAM memory thanks to PDC
 	 * feature */
-	pio_capture_to_buffer(OV_DATA_BUS_PIO, pointer_dest_buf, (IMAGE_WIDTH * pic_rows) >> 2);
+	pio_capture_to_buffer(OV_DATA_BUS_PIO, g_p_uc_cap_dest_buf,IMAGE_BUFFER_SIZE>>2);
 
 	/* Wait end of capture*/
-	while (!((OV_DATA_BUS_PIO->PIO_PCISR & PIO_PCIMR_RXBUFF) == PIO_PCIMR_RXBUFF))  //Data not being sent
+	while (!((OV_DATA_BUS_PIO->PIO_PCISR & PIO_PCIMR_RXBUFF) == PIO_PCIMR_RXBUFF))  
 	{
 		
 	}
@@ -187,6 +179,7 @@ uint8_t start_capture(void)
 		
 		return 1;
 	}
+	
 	
 }
 
@@ -261,33 +254,96 @@ uint8_t find_image_len(void){  //Finds image length based on JPEG protocol. Retu
 	//Look at example on they access the PIO buffer 
 	
 	//checks that image in buffer starts with FF D8 FF
-	uint8_t *first_ptr =  pointer_dest_buf;  
-	uint8_t *second_ptr = first_ptr++;
-	uint8_t *third_ptr = second_ptr++;
+	uint8_t *capt_ptr =  (uint8_t *)image_buffer;  
+
 	
 	image_len = 0;
+	uint32_t found_start = false;
 	uint32_t found_end = false;
+	uint32_t i; uint32_t j = 0;
+	uint8_t real_image_buffer[25000];
 	
-	if(*(int*)first_ptr == 15 && *(int*)second_ptr == 15 && *(int*)third_ptr  == 13){
+	
+	//Iterate through each hex value until finding the end of the JPEG protocol signature
+	for(i=0;i<IMAGE_BUFFER_SIZE;i++){
 		
-		image_len = 3;
-		int *ptr = third_ptr++;
+		//Start of JPEG (FF D8 FF)
+		if(image_buffer[i] == 0xff  && image_buffer[i+1] == 0xd8 && image_buffer[i+2] == 0xff ){
+
+			found_start = true;
+			//img_start_pointer = i;
+		}
 		
-		while(!found_end){
-			//Loop until finding the end markers FF D9 of a jpeg image
-			if(*(int*)ptr == "15" && *(int*)ptr++ == "15"){	
-				found_end = true;
-			}
-			
+		//Start counting when start has been found
+		if(found_start){
+			//usart_putchar(BOARD_USART, image_buffer[i]);
+			real_image_buffer[j] = image_buffer[i];
+			j++;
 			image_len++;
 		}
 		
-		return 1;
+		
+		//Loop until finding the end markers FF D9 of a jpeg image
+		if(found_start && image_buffer[i] == 0xff  && image_buffer[i+1] == 0xd9){
+			found_end = true;
+			//usart_putchar(BOARD_USART, image_buffer[i+1]);
+			real_image_buffer[j] = image_buffer[i+1];
+			image_len++;
+			break;
+		}
 		
 	}
-	else{
-		
-		//Image not in buffer or not using jpeg protocol
-		return 0;
+	
+	delay_ms(1000);
+	
+	//If capture was succesful, attempt to send over to the wifi chip
+	if(found_end  && found_start){
+		write_image_to_file(real_image_buffer);
 	}
+	
+	
 }
+
+
+void write_image_to_file(uint8_t *real_img){
+	
+	/*Writes an image from the SAM4S8B to the AMW136. If the
+	length of the image is zero (i.e. the image is not valid), return. Otherwise, follow this protocol
+	(illustrated in Appendix B): */
+	
+	int timeout = 3; //3 timeout for command complete 
+	if(image_len == 0){
+		return;
+	}
+	
+	/*1. Issue the command “image transfer xxxx”, where xxxx is replaced by the length of the
+	image you want to transfer.*/
+	char comm[25];
+	sprintf(comm, "image_transfer %u",image_len);
+	//char comm[] = "image_transfer";
+	//strcat(comm,image_len_s); 
+	write_wifi_command(comm,1);
+	
+	
+	//2. After the AMW136 acknowledges that it received your command, start streaming the image.
+	counts = 0;
+	/**while(!command_complete){
+		if(counts>timeout){
+		return; //break the loop
+		}
+	}**/
+	//Stream image
+	int i;
+
+	for(i=0;i< image_len;i++){
+		usart_putchar(BOARD_USART, real_img[i]);//Unsure of how to access the buffer and start streaming bit by bit
+	}
+	
+	/*3. After the image is done sending, the AMW136 should say “Complete”. However, the “command
+	complete” pin will not have a rising edge, so it will be hard to sense. You can still try
+	to sense it before moving on, or simply insert a slight delay. */
+	
+	//Should be done automatically by process_wifi_data()
+	
+		
+} 

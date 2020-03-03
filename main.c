@@ -59,21 +59,26 @@ int main (void)
 	
 	wifi_chip_init(); // Reset the WiFi and wait for it to connect, disable command prompt (>) and echo 
 	
+	//Set all flags to false:
+	web_setup_flag = false;
+	command_complete = false;
+	open_streams = false;
+	
 	//Wait for connection while listening to wifi web set up flag
 	while(!ioport_get_pin_level(NET_STATUS_PIN)){
 		
 		//check for web setup flag 
-	/*if(web_setup_flag){
+	if(web_setup_flag){
 		
 			//web setup
 			web_setup();
 			//clear the flag
 			web_setup_flag = false;
-		} */
+		} 
 	} 
 	
 	int reset_time = 5; //seconds to wait for reset 
-	
+	//command_complete =false;
 	//usart_write_line(BOARD_USART, "Start of while loop \r\n");
 	
 	/* Infinite while loop */
@@ -83,8 +88,8 @@ int main (void)
 		ioport_toggle_pin_level(MCU_STATUS_LED);
 		
 		delay_ms(300);
-		
-		start_capture();
+		//command_complete = false;
+		//start_capture();
 		
 		//process_data_wifi();
 		
@@ -99,9 +104,9 @@ int main (void)
 			//clear the flag
 			web_setup_flag = false;
 		
-		}*/
-		//else{ //If 1
-		/*	delay_ms(1000);
+		}
+		else{ //If 1
+			delay_ms(1000);
 			//Check that the for connections, if no connections, reset and wait for connection (check for high signal on GPIO 14 of wifi chip)
 			if(!ioport_get_pin_level(NET_STATUS_PIN)){ //if 2
 				//Reset wifi chip
@@ -114,7 +119,7 @@ int main (void)
 					}
 					
 				}
-				else{ //if 2
+				else{ 
 				//send poll all and check response
 					write_wifi_command("poll all \r\n", 1);
 					if(!open_streams){  //(send "poll all" to the wifi chip and check response (!none)) If 3
@@ -130,8 +135,8 @@ int main (void)
 							} //else 3
 			
 				} //else 2
-			 */
-			//} //else 1
+			 
+			} //else 1 */
 		
 		} //while loop
 } //main

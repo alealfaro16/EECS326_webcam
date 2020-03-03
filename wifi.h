@@ -41,6 +41,16 @@
 #define PIN_USART0_TXD    {PIO_PA6A_TXD0, PIOA, ID_PIOA, PIO_PERIPH_A, PIO_DEFAULT}
 #define PIN_USART0_TXD_IDX        (PIO_PA6_IDX)
 #define PIN_USART0_TXD_FLAGS      (PIO_PERIPH_A | PIO_DEFAULT)
+/** USART0 pin CTS */
+#define PIN_USART0_CTS    {PIO_PA8A_CTS0, PIOA, ID_PIOA, PIO_PERIPH_A, PIO_DEFAULT}
+#define PIN_USART0_CTS_IDX        (PIO_PA8_IDX)
+#define PIN_USART0_CTS_FLAGS      (PIO_PERIPH_A | PIO_DEFAULT)
+
+
+/** USART0 pin RTS (Configure as an output and drive to low) */
+#define PIN_USART0_RTS			PIO_PA7_IDX
+
+
 
 /* Web setup button board defines (using PA23). */
 #define WEB_SETUP_BTN_ID                 ID_PIOA
@@ -73,8 +83,14 @@ void write_wifi_command(const char* comm, uint8_t cnt);
 void wifi_chip_init(void);
 void web_setup(void);
 
- extern uint32_t open_streams;
- extern volatile uint32_t web_setup_flag;
- extern volatile uint32_t command_complete;
+
+/* Web setup flag (true if it's triggered and false otherwise) */
+volatile uint32_t web_setup_flag;
+
+/* Command complete flag (true if it's triggered and false otherwise) */
+volatile uint32_t command_complete;
+
+/* Set to true when open stream is avalible for webcam (check wifi chip response for it) */
+volatile uint32_t open_streams;
 
 #endif /* WIFI_H_ */

@@ -26,14 +26,6 @@ static uint8_t byte_buffer = 0;
 static unsigned char UART_RxBuf[UART_RX_BUFFER_SIZE];
 static RxBuff_count = 0;
 
-/* Web setup flag (true if it's triggered and false otherwise) */
-volatile uint32_t web_setup_flag = false;
-
-/* Command complete flag (true if it's triggered and false otherwise) */
-volatile uint32_t command_complete = false;
-
-/* Set to true when open stream is avalible for webcam (check wifi chip response for it) */
-uint32_t open_streams = false;
 
 
 /**
@@ -104,12 +96,13 @@ void configure_usart_wifi(void)
 
 
 void configure_wifi_comm_pin(void){ //Configuration of “command complete” rising-edge interrupt used for serial communication with wifi chip (see Appendix B for more details)
+	
 
 	/* Configure PIO clock. */
-	//pmc_enable_periph_clk(CMD_PIN_ID);
+	pmc_enable_periph_clk(CMD_PIN_ID);
 
 	/* Adjust PIO debounce filter using a 10 Hz filter. */
-	//pio_set_debounce_filter(WEB_SETUP_BTN_PIO, CMD_PIN_MSK, 10);
+	pio_set_debounce_filter(CMD_PIN_PIO, CMD_PIN_MSK, 10);
 
 	/* Initialize PIO interrupt handler, see PIO definition in conf_board.h
 	**/
@@ -120,17 +113,18 @@ void configure_wifi_comm_pin(void){ //Configuration of “command complete” rising
    NVIC_EnableIRQ((IRQn_Type)CMD_PIN_ID);
 
    /* Enable PIO interrupt lines. */
-   //pio_enable_interrupt(CMD_PIN_PIO, WEB_SETUP_BTN_MSK);
+   pio_enable_interrupt(CMD_PIN_PIO, CMD_PIN_MSK);
 }
 
 
 void configure_wifi_web_setup_pin(void){  //Configuration of button interrupt to initiate web setup.
 	
+	
 	/* Configure PIO clock. */
-	//pmc_enable_periph_clk(WEB_SETUP_BTN_ID);
+	pmc_enable_periph_clk(WEB_SETUP_BTN_ID);
 
 	/* Adjust PIO debounce filter using a 10 Hz filter. */
-	//pio_set_debounce_filter(WEB_SETUP_BTN_PIO, WEB_SETUP_BTN_MSK, 10);
+	pio_set_debounce_filter(WEB_SETUP_BTN_PIO, WEB_SETUP_BTN_MSK, 10);
 
 	/* Initialize PIO interrupt handler, see PIO definition in conf_board.h
 	**/
@@ -224,6 +218,7 @@ void process_data_wifi(void){
 	else if(!strstr(UART_RxBuf, "[Opened: 0]") == 0){
 		
 		open_streams = true;
+		usart_write_line(BOARD_USART,"Success!");
 		memset(UART_RxBuf,"0",UART_RX_BUFFER_SIZE);
 	}
 	else if(!strstr(UART_RxBuf, "Complete") == 0){
@@ -235,6 +230,7 @@ void process_data_wifi(void){
 	else if(!strstr(UART_RxBuf, "0,0") == 0){
 		
 		open_streams = true;
+		usart_write_line(BOARD_USART,"Success!");
 		memset(UART_RxBuf,"0",UART_RX_BUFFER_SIZE);
 	}
 	else if(!strstr(UART_RxBuf, "None") == 0){
@@ -246,7 +242,6 @@ void process_data_wifi(void){
 	
 }
 
-// void write_image_to_file(void)
 	
 	
 void wifi_chip_init(void){
@@ -300,6 +295,50 @@ void wifi_chip_init(void){
 		
 		
 }
+
+void write_image_to_file(uint8_t *real_img){
+	
+	/*Writes an image from the SAM4S8B to the AMW136. If the
+	length of the image is zero (i.e. the image is not valid), return. Otherwise, follow this protocol
+	(illustrated in Appendix B): */
+	
+	int timeout = 5; //5s timeout for command complete 
+	if(image_len == 0){
+		return;
+	}
+	
+	/*1. Issue the command “image transfer xxxx”, where xxxx is replaced by the length of the
+	image you want to transfer.*/
+	char comm[25];
+	sprintf(comm, "image_transfer %u \r\n",image_len);
+	//char comm[] = "image_transfer";
+	//strcat(comm,image_len_s); 
+	write_wifi_command(comm,1);
+
+	delay_ms(5);
+	
+	//2. After the AMW136 acknowledges that it received your command, start streaming the image.
+	//counts = 0;
+	//while(!command_complete){
+	//	if(counts>timeout){
+	//	return; //break the loop
+	//	}
+	//}
+	//command_complete =false;
+	//Stream image
+	int i;
+	for(i=0;i< image_len;i++){
+		usart_putchar(BOARD_USART, real_img[i]);//Unsure of how to access the buffer and start streaming bit by bit
+	}
+	
+	/*3. After the image is done sending, the AMW136 should say “Complete”. However, the “command
+	complete” pin will not have a rising edge, so it will be hard to sense. You can still try
+	to sense it before moving on, or simply insert a slight delay. */
+	
+	//Should be done automatically by process_wifi_data()
+	
+		
+} 
 
 void web_setup(void){
 	

@@ -55,6 +55,13 @@ void board_init(void)
 	/* Configure USART TXD pin */
 	gpio_configure_pin(PIN_USART0_TXD_IDX, PIN_USART0_TXD_FLAGS);
 	
+	/* Configure USART CTS pin */
+	gpio_configure_pin(PIN_USART0_CTS_IDX, PIN_USART0_CTS_FLAGS);
+	
+	/*Configure USART RTS pin as output and drive to low*/
+	ioport_set_pin_dir(PIN_USART0_RTS,IOPORT_DIR_OUTPUT);
+	ioport_set_pin_level(PIN_USART0_RTS, false);
+	
 	/* Configure Command Complete pin */
 	gpio_configure_pin(CMD_PIN_IDX, CMD_PIN_ATTR);
 	

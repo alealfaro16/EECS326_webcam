@@ -27,10 +27,10 @@ static unsigned char UART_RxBuf[UART_RX_BUFFER_SIZE];
 static RxBuff_count = 0;
 
 /* Web setup flag (true if it's triggered and false otherwise) */
-volatile uint32_t web_setup_flag = true;
+volatile uint32_t web_setup_flag = false;
 
 /* Command complete flag (true if it's triggered and false otherwise) */
-volatile uint32_t command_complete = true;
+volatile uint32_t command_complete = false;
 
 /* Set to true when open stream is avalible for webcam (check wifi chip response for it) */
 uint32_t open_streams = false;
@@ -167,7 +167,7 @@ void process_incoming_byte_wifi(uint8_t in_byte){  //Stores every incoming byte 
 	
 	
 	UART_RxBuf[RxBuff_count++] = in_byte; /* store received data in buffer */
-	usart_putchar(BOARD_USART, in_byte); //echo 
+	//usart_putchar(BOARD_USART, in_byte); //echo DISABLE WHEN NOT DEBUGGING!!!
 	
 	
 }
@@ -230,6 +230,17 @@ void process_data_wifi(void){
 		
 		//Image transfer has been completed, delay and restart loop
 		delay_ms(50);
+		memset(UART_RxBuf,"0",UART_RX_BUFFER_SIZE);
+	}
+	else if(!strstr(UART_RxBuf, "0,0") == 0){
+		
+		open_streams = true;
+		memset(UART_RxBuf,"0",UART_RX_BUFFER_SIZE);
+	}
+	else if(!strstr(UART_RxBuf, "None") == 0){
+		
+		open_streams = false;
+		memset(UART_RxBuf,"0",UART_RX_BUFFER_SIZE);
 	}
 	
 	

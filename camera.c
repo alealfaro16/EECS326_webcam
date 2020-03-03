@@ -319,7 +319,7 @@ void write_image_to_file(uint8_t *real_img){
 	/*1. Issue the command “image transfer xxxx”, where xxxx is replaced by the length of the
 	image you want to transfer.*/
 	char comm[25];
-	sprintf(comm, "image_transfer %u",image_len);
+	sprintf(comm, "image_transfer %u \r\n",image_len);
 	//char comm[] = "image_transfer";
 	//strcat(comm,image_len_s); 
 	write_wifi_command(comm,1);
@@ -335,9 +335,9 @@ void write_image_to_file(uint8_t *real_img){
 	//Stream image
 	int i;
 
-	for(i=0;i< image_len;i++){
+	/*for(i=0;i< image_len;i++){
 		usart_putchar(BOARD_USART, real_img[i]);//Unsure of how to access the buffer and start streaming bit by bit
-	}
+	}*/
 	
 	/*3. After the image is done sending, the AMW136 should say “Complete”. However, the “command
 	complete” pin will not have a rising edge, so it will be hard to sense. You can still try

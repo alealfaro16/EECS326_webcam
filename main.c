@@ -63,13 +63,13 @@ int main (void)
 	while(!ioport_get_pin_level(NET_STATUS_PIN)){
 		
 		//check for web setup flag 
-	if(web_setup_flag){
+	/*if(web_setup_flag){
 		
 			//web setup
 			web_setup();
 			//clear the flag
 			web_setup_flag = false;
-		}
+		} */
 	} 
 	
 	int reset_time = 5; //seconds to wait for reset 
@@ -84,6 +84,8 @@ int main (void)
 		
 		delay_ms(300);
 		
+		start_capture();
+		
 		//process_data_wifi();
 		
 		//uint8_t capture = start_capture();
@@ -91,45 +93,45 @@ int main (void)
 		//write_image_to_file();
 		
 		//check for web setup flag
-		if(web_setup_flag){
+		/*if(web_setup_flag){ //If 1
 			//web setup
 			web_setup();
+			//clear the flag
+			web_setup_flag = false;
 		
-		}
-		else{
-			delay_ms(1000);
+		}*/
+		//else{ //If 1
+		/*	delay_ms(1000);
 			//Check that the for connections, if no connections, reset and wait for connection (check for high signal on GPIO 14 of wifi chip)
-			if(!ioport_get_pin_level(NET_STATUS_PIN)){
+			if(!ioport_get_pin_level(NET_STATUS_PIN)){ //if 2
 				//Reset wifi chip
 				ioport_set_pin_level(WIFI_RST_PIN,false);
 				counts = 0;
 				ioport_set_pin_level(WIFI_RST_PIN,true);
-				while(1){
+				while(counts>reset_time){
 					
 					//Wait for x amount of seconds and then break the loop
-					if(counts>reset_time){
-						break; //break the loop
 					}
 					
 				}
-			}
-			else{
+				else{ //if 2
 				//send poll all and check response
-				if(!open_streams){  //(send "poll all" to the wifi chip and check response (!none))
-					delay_ms(1000); //delay 1s
-					continue; //Reset the loop
+					write_wifi_command("poll all \r\n", 1);
+					if(!open_streams){  //(send "poll all" to the wifi chip and check response (!none)) If 3
+						delay_ms(1000); //delay 1s
+						continue; //Reset the loop
 					
-					}
-				//Succesful connection, take picture and send it over wifi
-				else{
-					//Take picture, if succesful capture send over wifi
-					start_capture();
+						}
+						//Succesful connection, take picture and send it over wifi
+						else{ //If 3
+							//Take picture, if succesful capture send over wifi
+							start_capture();
 
-					} 
+							} //else 3
 			
-				} 
-			
-			}
+				} //else 2
+			 */
+			//} //else 1
 		
 		} //while loop
 } //main

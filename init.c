@@ -12,6 +12,7 @@
 #include <board.h>
 #include <conf_board.h>
 #include "camera.h"
+#include "user_board.h"
 #include "wifi.h"
 
 void board_init(void)

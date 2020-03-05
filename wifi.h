@@ -11,8 +11,14 @@
 
 #include "asf.h"
 
+typedef enum{
+	CMD_CMPLT,
+	OPEN_STREAMS,
+	WEB_SETUP
+}flag;
+
 /** Size of the receive buffer used by the PDC, in bytes. */
-#define UART_RX_BUFFER_SIZE 128 /* 1,2,4,8,16,32,64,128 or 256 bytes */
+#define UART_RX_BUFFER_SIZE 500 
 #define UART_RX_BUFFER_MASK ( UART_RX_BUFFER_SIZE - 1 )
 
 /** All interrupt mask. */
@@ -82,15 +88,8 @@ void write_wifi_command(const char* comm, uint8_t cnt);
 //void write_image_to_file(void);
 void wifi_chip_init(void);
 void web_setup(void);
+uint32_t get_flag(flag f);
+void set_flag(flag f, bool val);
 
-
-/* Web setup flag (true if it's triggered and false otherwise) */
-volatile uint32_t web_setup_flag;
-
-/* Command complete flag (true if it's triggered and false otherwise) */
-volatile uint32_t command_complete;
-
-/* Set to true when open stream is avalible for webcam (check wifi chip response for it) */
-volatile uint32_t open_streams;
 
 #endif /* WIFI_H_ */

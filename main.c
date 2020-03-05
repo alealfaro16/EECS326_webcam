@@ -57,23 +57,19 @@ int main (void)
 	init_camera(); //Enable PIO 
 	configure_camera();
 	
-	wifi_chip_init(); // Reset the WiFi and wait for it to connect, disable command prompt (>) and echo 
-	
-	//Set all flags to false:
-	web_setup_flag = false;
-	command_complete = false;
-	open_streams = false;
+	//wifi_chip_init(); // Reset the WiFi and wait for it to connect, disable command prompt (>) and echo 
+
 	
 	//Wait for connection while listening to wifi web set up flag
 	while(!ioport_get_pin_level(NET_STATUS_PIN)){
 		
 		//check for web setup flag 
-	if(web_setup_flag){
+	if(get_flag(WEB_SETUP)){
 		
 			//web setup
 			web_setup();
 			//clear the flag
-			web_setup_flag = false;
+			set_flag(WEB_SETUP, false);
 		} 
 	} 
 	
@@ -87,26 +83,19 @@ int main (void)
 		
 		ioport_toggle_pin_level(MCU_STATUS_LED);
 		
-		delay_ms(300);
-		//command_complete = false;
 		//start_capture();
 		
-		//process_data_wifi();
-		
-		//uint8_t capture = start_capture();
-		//usart_putchar(BOARD_USART,capture);
-		//write_image_to_file();
 		
 		//check for web setup flag
-		/*if(web_setup_flag){ //If 1
+		if(get_flag(WEB_SETUP)){ //If 1
 			//web setup
 			web_setup();
 			//clear the flag
-			web_setup_flag = false;
+			set_flag(WEB_SETUP, false);
 		
 		}
 		else{ //If 1
-			delay_ms(1000);
+
 			//Check that the for connections, if no connections, reset and wait for connection (check for high signal on GPIO 14 of wifi chip)
 			if(!ioport_get_pin_level(NET_STATUS_PIN)){ //if 2
 				//Reset wifi chip
@@ -119,24 +108,28 @@ int main (void)
 					}
 					
 				}
-				else{ 
+			else{ 
 				//send poll all and check response
-					write_wifi_command("poll all \r\n", 1);
-					if(!open_streams){  //(send "poll all" to the wifi chip and check response (!none)) If 3
-						delay_ms(1000); //delay 1s
-						continue; //Reset the loop
+					counts = 0;
+					if(!get_flag(OPEN_STREAMS)){
+						while(!get_flag(OPEN_STREAMS)){  //(send "poll all" to the wifi chip and check response (!none)) If 3
+						
+							if(counts>reset_time){ 
+								continue; //Reset the loop
+							}
+							write_wifi_command("poll all \r\n", 0.5);
+							delay_ms(50);
 					
 						}
-						//Succesful connection, take picture and send it over wifi
-						else{ //If 3
-							//Take picture, if succesful capture send over wifi
-							start_capture();
-
-							} //else 3
+					}
+					//Succesful connection, take picture and send it over wifi
+					//Take picture, if succesful capture send over wifi
+					set_flag(CMD_CMPLT, false);
+					start_capture();
 			
 				} //else 2
 			 
-			} //else 1 */
+			} //else 1 
 		
 		} //while loop
 } //main

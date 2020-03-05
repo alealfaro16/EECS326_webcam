@@ -136,7 +136,7 @@ uint8_t start_capture(void)
 	uint8_t *g_p_uc_cap_dest_buf = (uint8_t *)image_buffer;
 	
 	//Clear buffer
-	memset(image_buffer,"0",IMAGE_BUFFER_SIZE);
+	memset(image_buffer,0,IMAGE_BUFFER_SIZE);
 
 	/* Enable vsync interrupt*/
 	pio_enable_interrupt(OV_VSYNC_PIO, OV_VSYNC_MASK);
@@ -294,7 +294,7 @@ uint8_t find_image_len(void){  //Finds image length based on JPEG protocol. Retu
 		
 	}
 	
-	delay_ms(1000);
+	//delay_ms(1000);
 	
 	//If capture was succesful, attempt to send over to the wifi chip
 	if(found_end  && found_start){

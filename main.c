@@ -57,7 +57,7 @@ int main (void)
 	init_camera(); //Enable PIO 
 	configure_camera();
 	
-	//wifi_chip_init(); // Reset the WiFi and wait for it to connect, disable command prompt (>) and echo 
+	wifi_chip_init(); // Reset the WiFi and wait for it to connect, disable command prompt (>) and echo 
 
 	
 	//Wait for connection while listening to wifi web set up flag
@@ -74,17 +74,13 @@ int main (void)
 	} 
 	
 	int reset_time = 5; //seconds to wait for reset 
-	//command_complete =false;
-	//usart_write_line(BOARD_USART, "Start of while loop \r\n");
 	
 	/* Infinite while loop */
 	while(1){
 		
 		
 		ioport_toggle_pin_level(MCU_STATUS_LED);
-		
-		//start_capture();
-		
+
 		
 		//check for web setup flag
 		if(get_flag(WEB_SETUP)){ //If 1
@@ -117,9 +113,8 @@ int main (void)
 							if(counts>reset_time){ 
 								continue; //Reset the loop
 							}
-							write_wifi_command("poll all \r\n", 0.5);
-							delay_ms(50);
-					
+							write_wifi_command("poll all \r\n", 1);
+							delay_ms(100);	
 						}
 					}
 					//Succesful connection, take picture and send it over wifi

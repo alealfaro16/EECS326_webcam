@@ -260,8 +260,7 @@ uint8_t find_image_len(void){  //Finds image length based on JPEG protocol. Retu
 	image_len = 0;
 	uint32_t found_start = false;
 	uint32_t found_end = false;
-	uint32_t i; uint32_t j = 0;
-	uint8_t real_image_buffer[25000];
+	uint32_t i; //uint32_t j = 0;
 	
 	
 	//Iterate through each hex value until finding the end of the JPEG protocol signature
@@ -271,14 +270,11 @@ uint8_t find_image_len(void){  //Finds image length based on JPEG protocol. Retu
 		if(image_buffer[i] == 0xff  && image_buffer[i+1] == 0xd8 && image_buffer[i+2] == 0xff ){
 
 			found_start = true;
-			//img_start_pointer = i;
+			img_start_pointer = i;
 		}
 		
 		//Start counting when start has been found
 		if(found_start){
-			//usart_putchar(BOARD_USART, image_buffer[i]);
-			real_image_buffer[j] = image_buffer[i];
-			j++;
 			image_len++;
 		}
 		
@@ -286,8 +282,6 @@ uint8_t find_image_len(void){  //Finds image length based on JPEG protocol. Retu
 		//Loop until finding the end markers FF D9 of a jpeg image
 		if(found_start && image_buffer[i] == 0xff  && image_buffer[i+1] == 0xd9){
 			found_end = true;
-			//usart_putchar(BOARD_USART, image_buffer[i+1]);
-			real_image_buffer[j] = image_buffer[i+1];
 			image_len++;
 			break;
 		}
@@ -298,7 +292,7 @@ uint8_t find_image_len(void){  //Finds image length based on JPEG protocol. Retu
 	
 	//If capture was succesful, attempt to send over to the wifi chip
 	if(found_end  && found_start){
-		write_image_to_file(real_image_buffer);
+		write_image_to_file(&image_buffer[img_start_pointer]);
 	}
 	
 	

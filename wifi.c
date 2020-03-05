@@ -375,7 +375,7 @@ void write_image_to_file(uint8_t *real_img){
 	//Stream image
 	int i;
 	for(i=0;i< image_len;i++){
-		usart_putchar(BOARD_USART, real_img[i]);//Unsure of how to access the buffer and start streaming bit by bit
+		usart_putchar(BOARD_USART, real_img[i]);
 	}
 	
 	/*3. After the image is done sending, the AMW136 should say “Complete”. However, the “command

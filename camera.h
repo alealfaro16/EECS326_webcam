@@ -17,7 +17,7 @@
 #define BOARD_TWI_IRQn                 TWI0_IRQn
 
 /* Image sensor board defines. */
-#define IMAGE_BUFFER_SIZE                    40000 
+#define IMAGE_BUFFER_SIZE                    25000 
 
 // Image sensor VSYNC pin.
 #define OV_VSYNC_GPIO              PIO_PA15_IDX
